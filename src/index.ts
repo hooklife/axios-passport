@@ -1,0 +1,1 @@
+export { withPassport } from './axios-passport';
