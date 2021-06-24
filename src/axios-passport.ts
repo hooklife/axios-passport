@@ -1,11 +1,11 @@
 
-import axios, { AxiosInstance, AxiosStatic } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { IAxiosPassportConfig, AxiosPassportInstance } from './types'
 import { defaultAxiosPassportConfig } from './default-config';
-import { TokenUtils, ITokens } from './tokenUtils'
+import { TokenUtils  } from './tokenUtils'
 import { createLoginMethod } from './passport-login'
 import { injectPassportInterceptor } from './axios-passport-interceptor';
-export function withPassport(instance: AxiosInstance, config: IAxiosPassportConfig): AxiosInstance | AxiosPassportInstance {
+export function withPassport(instance: AxiosInstance, config: IAxiosPassportConfig): AxiosPassportInstance {
 
     // merge default config options
     const axiosPassportConfig: IAxiosPassportConfig = { ...defaultAxiosPassportConfig, ...config };
@@ -13,8 +13,8 @@ export function withPassport(instance: AxiosInstance, config: IAxiosPassportConf
     const tokenUtils = new TokenUtils()
 
 
-    instance = createLoginMethod(instance as AxiosPassportInstance, config, tokenUtils)
-    injectPassportInterceptor(instance, config, tokenUtils)
+    instance = createLoginMethod(instance as AxiosPassportInstance, axiosPassportConfig, tokenUtils)
+    injectPassportInterceptor(instance, axiosPassportConfig, tokenUtils)
 
 
     return instance

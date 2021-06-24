@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosStatic } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosStatic } from 'axios';
 import { TokenUtils } from './tokenUtils';
 import { IAxiosPassportConfig, AxiosPassportInstance } from './types'
 
@@ -7,8 +7,8 @@ export function createLoginMethod(
     instance: AxiosPassportInstance,
     axiosPassportConfig: IAxiosPassportConfig,
     tokenUtils: TokenUtils
-) {
-    instance.login = function (username: string, password: string) {
+): AxiosPassportInstance{
+    instance.login = function (username: string, password: string, config: AxiosRequestConfig):Promise<any> {
         return new Promise((resolve, reject) => {
             instance.post(`${axiosPassportConfig.passportUrl}`, {
                 grant_type: "password",
@@ -17,7 +17,7 @@ export function createLoginMethod(
                 username: username,
                 password: password,
                 scope: axiosPassportConfig.scope
-            }, { skipRefreshToken: true }).then((response) => {
+            }, { ...config,skipRefreshToken: true }).then((response) => {
                 const { data } = response
                 tokenUtils.setTokens({
                     isValidAccessToken: true,

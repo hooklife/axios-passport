@@ -14,7 +14,7 @@ export interface IAxiosPassportConfig {
     scope?: string
 }
 export interface AxiosPassportInstance extends AxiosInstance {
-    login?: Function
+    login?(username:string,password:string,config?:AxiosRequestConfig):Promise<any>  
 }
 
 export interface IRefreshTokenResponse {
