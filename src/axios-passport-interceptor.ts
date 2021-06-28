@@ -1,104 +1,113 @@
 
 import axios from 'axios';
-import { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { IAxiosPassportConfig, IRefreshTokenResponse } from './types'
-import { TokenUtils, ITokens } from './tokenUtils'
+import { TokenUtils, IToken } from './token';
 
 
 
 let isRefreshing = false;
-let requestQueue = [];
 
 
-function passportInterceptor(
+type IRequestsQueue = {
+    resolve: (value?: unknown) => void
+    reject: (reason?: unknown) => void
+}[]
+let requestQueue: IRequestsQueue = [];
+
+async function passportInterceptor(
     axiosInstance: AxiosInstance,
-    axiosRequestConfig: AxiosRequestConfig,
-    axiosPassportConfig: IAxiosPassportConfig,
-    tokenUtils: TokenUtils
+    requestConfig: AxiosRequestConfig,
+    axiosPassportConfig: IAxiosPassportConfig
 ) {
 
-    const tokens: ITokens = tokenUtils.getTokens()
     const source = axios.CancelToken.source()
-    axiosRequestConfig.cancelToken = source.token
+    requestConfig.cancelToken = source.token
 
 
-    if (axiosRequestConfig['skipRefreshToken']) {
-        return axiosRequestConfig
+    if (requestConfig['skipRefreshToken']) {
+        return requestConfig
+    }
+    if (!TokenUtils.getRefreshToken) {
+        return requestConfig
     }
 
-
-    if (tokens.isValidAccessToken) {
-        axiosRequestConfig.headers['Authorization'] = 'Bearer ' + tokens.accessToken
-        return axiosRequestConfig
+    if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+            requestQueue.push({ resolve, reject })
+        }).then((token) => {
+            requestConfig.headers['Authorization'] = 'Bearer ' + token
+            return requestConfig
+        }).catch(Promise.reject)
     }
 
-    if (!tokens.isValidAccessToken && !tokens.refreshToken) {
-        source.cancel()
-        return axiosRequestConfig
+    let accessToken
+    try {
+        accessToken = await refreshTokenIfNeeded(axiosInstance, axiosPassportConfig)
+        resolveQueue(accessToken)
+    } catch (error) {
+        declineQueue(error)
+        throw new Error(`Unable to refresh access token for request due to token refresh error: ${error.message}`)
     }
 
-    if (!isRefreshing) {
-        refreshAccessToken(axiosInstance, tokens.refreshToken, axiosPassportConfig).then((response: AxiosResponse<IRefreshTokenResponse>) => {
-            const { data } = response
-
-            tokenUtils.setTokens({
-                isValidAccessToken: true,
-                accessToken: data.access_token,
-                refreshToken: data.refresh_token,
-                expires: data.expires_in,
-            })
-
-            axiosRequestConfig.headers['Authorization'] = 'Bearer ' + tokenUtils.getAccessToken()
-            isRefreshing = false
-            callRequestsFromQueue(tokens.accessToken);
-            clearQueue(); // and clean queu
-            return axiosRequestConfig
-        }, () => {
-            // 刷新失败
-            isRefreshing = false
-            clearQueue()
-            tokenUtils.removeTokens()
-        })
-    }
-    const requestQueue = new Promise(resolve => {
-        // we push new function to queue
-        addRequestToQueue(accessToken => {
-            axiosRequestConfig.headers['Authorization'] = `Bearer ${accessToken}`
-            resolve(axiosRequestConfig);
-        });
-    });
-
-    return requestQueue;
-
-
+    // add token to headers
+    requestConfig.headers['Authorization'] = `Bearer ${accessToken}`
+    return requestConfig
 }
-const refreshAccessToken = (instance: AxiosInstance, refreshToken: String, config: IAxiosPassportConfig) => {
+
+
+
+const refreshTokenIfNeeded = async (instance: AxiosInstance, config: IAxiosPassportConfig) => {
+    if (TokenUtils.isValidAccessToken()) {
+        return TokenUtils.getAccessToken()
+    }
+
     const refreshParams = {
         grant_type: 'refresh_token',
-        refresh_token: refreshToken,
+        refresh_token: TokenUtils.getRefreshToken(),
         client_id: config.clientId,
         client_secret: config.clientSecret,
         scope: config.scope
     };
-    return instance.post<IRefreshTokenResponse>(config.passportUrl, refreshParams, { skipRefreshToken: true });
+
+    try {
+        isRefreshing = false
+        const { data } = await instance.post<IRefreshTokenResponse>(config.passportUrl, refreshParams, { skipRefreshToken: true });
+        TokenUtils.setTokens({
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expires: data.expires_in,
+        })
+        return data.access_token
+    } catch (e) {
+        requestQueue = []
+        TokenUtils.removeTokens()
+    } finally {
+        isRefreshing = false
+    }
+
 };
 
 
-const callRequestsFromQueue = accessToken => {
-    requestQueue.forEach(callback => callback(accessToken));
-};
-const addRequestToQueue = callback => {
-    requestQueue.push(callback);
-};
-const clearQueue = () => {
-    requestQueue = [];
-};
+const resolveQueue = (token: string) => {
+    requestQueue.forEach((p) => {
+        p.resolve(token)
+    })
+    requestQueue = []
+}
 
+const declineQueue = (error: Error) => {
+    requestQueue.forEach((p) => {
+        p.reject(error)
+    })
 
-export function injectPassportInterceptor(instance: AxiosInstance, axiosPassportConfig: IAxiosPassportConfig, tokenUtils: TokenUtils) {
+    requestQueue = []
+}
+
+export function injectPassportInterceptor(instance: AxiosInstance, axiosPassportConfig: IAxiosPassportConfig) {
     // add an interceptor
     instance.interceptors.request.use((axiosRequestConfig: AxiosRequestConfig) => {
-        const config = passportInterceptor(instance, axiosRequestConfig, axiosPassportConfig, tokenUtils);
+        const config = passportInterceptor(instance, axiosRequestConfig, axiosPassportConfig);
         return config;
     });
 }
