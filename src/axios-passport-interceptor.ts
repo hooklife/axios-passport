@@ -71,7 +71,7 @@ const refreshTokenIfNeeded = async (instance: AxiosInstance, config: IAxiosPassp
     };
 
     try {
-        isRefreshing = false
+        isRefreshing = true 
         const { data } = await instance.post<IRefreshTokenResponse>(config.passportUrl, refreshParams, { skipRefreshToken: true });
         TokenUtils.setTokens({
             accessToken: data.access_token,
