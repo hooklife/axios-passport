@@ -1,0 +1,26 @@
+{
+  "include": [
+    "src",
+    "test"
+  ],
+  "compilerOptions": {
+    /* Visit https://aka.ms/tsconfig.json to read more about this file */
+    "incremental": true, /* Enable incremental compilation */
+    "target": "es2019", /* Minimum supported Node version is ^12.20 => cf. https://stackoverflow.com/a/59787575/335418 */
+    "module": "commonjs", /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', or 'ESNext'. */
+    "lib": [
+      "es2020",
+      "DOM"
+    ], /* Minimum supported Node version is ^12.20 => cf. https://stackoverflow.com/a/59787575/335418 */
+    "tsBuildInfoFile": ".cache/.tsbuildinfo",
+    "noUnusedLocals": true, /* Report errors on unused locals. */
+    "noUnusedParameters": true, /* Report errors on unused parameters. */
+    "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
+    "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
+    "esModuleInterop": true, /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    "forceConsistentCasingInFileNames": true, /* Disallow inconsistently-cased references to the same file. */
+    "outDir": "./dist",
+    "declaration": true,
+    "removeComments": true,
+  }
+}

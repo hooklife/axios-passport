@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { IAxiosPassportConfig, IRefreshTokenResponse } from './types'
-import { TokenUtils, IToken } from './token';
+import { TokenUtils } from './token';
 
 
 
@@ -45,9 +45,9 @@ async function passportInterceptor(
     try {
         accessToken = await refreshTokenIfNeeded(axiosInstance, axiosPassportConfig)
         resolveQueue(accessToken)
-    } catch (error) {
+    } catch (error:any) {
         declineQueue(error)
-        throw new Error(`Unable to refresh access token for request due to token refresh error: ${error.message}`)
+        throw new Error(`Unable to refresh access token for request due to token refresh error: ${error?.message}`)
     }
 
     // add token to headers
@@ -85,7 +85,7 @@ const refreshTokenIfNeeded = async (instance: AxiosInstance, config: IAxiosPassp
     } finally {
         isRefreshing = false
     }
-
+    throw new Error;
 };
 
 

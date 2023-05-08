@@ -8,7 +8,7 @@ declare module 'axios' {
 }
 
 export interface IAxiosPassportConfig {
-    passportUrl?: string
+    passportUrl: string
     clientId: string
     clientSecret: string
     scope?: string
